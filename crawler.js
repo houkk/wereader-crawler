@@ -3,11 +3,11 @@ const cheerio = require('cheerio')
 const _ = require('lodash')
 
 class Crawler {
-  constructor(star = 90, pageNum = 100) {
+  constructor(star = 90) {
     this.weUrl = 'https://weread.qq.com/'
     this.categoryUrl = 'https://weread.qq.com/web/category'
     this.star = star // 评分 90 => 9.0
-    this.pageNum = pageNum
+    this.pageNum = 20 // 暂时貌似无法修改
   }
 
   /**
@@ -28,6 +28,7 @@ class Crawler {
 
     const res = await getAsync(url, { qs })
     const books = res.books
+
     books.forEach(book => {
       const bookInfo = book.bookInfo
       // console.log('bookInfo ==> ', bookInfo.star)
@@ -39,7 +40,7 @@ class Crawler {
     const hasMore = res.hasMore
 
     if (hasMore) {
-      const res = await this.getBook(url, qs.maxIndex + this.pageNum)
+      const res = await this.getBook(url, qs.maxIndex + this.pageNum, rank)
       bookList = bookList.concat(res)
     }
 
@@ -50,7 +51,7 @@ class Crawler {
    * @description 获取微信阅读所有分类
    */
   async getCategory() {
-    const categorys = []
+    const categories = []
 
     const url = this.categoryUrl
     const res = await getAsync(url, {
@@ -67,20 +68,20 @@ class Crawler {
       const url = aLabel.attr('href')
       const rankText = aLabel.find('.ranking_list_item_txt').text().trim()
       const text = rankText|| aLabel.text().trim()
-      categorys.push({ url, text, rank: rankText ? 1 : 0 })
+      categories.push({ url, text, rank: rankText ? 1 : 0 })
     })
-    return categorys
+    return categories
   }
 
-  async run () {
+  async run (cates = []) {
     // 1. 获取分类
-    const categorys = await this.getCategory()
+    const categories = cates.length ? cates : await this.getCategory()
 
     const books = []
 
     // 2. 按照分类分别获取书籍列表, 可优化没必要
-    for (let i in categorys) {
-      const cate = categorys[i]
+    for (let i in categories) {
+      const cate = categories[i]
 
       console.log(`${cate.text} start`)
       console.time(cate.text)
